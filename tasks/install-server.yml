@@ -73,6 +73,16 @@
     - reload minio systemd
     - restart minio
 
+# For some reason I don't know the minio service is not loaded in CentOS 8 Stream.
+# The 'Enable and start the Minio service' tasks fails with message "Could not find the requested service minio: host". I debugged through
+# the code of the ansible systemd module and found that when the state is checked using 'systemctl show minio.service' that 'LoadState=not-found'.
+# To avoid the error I have to explicitly reload the service.
+- name: Reload minio service
+  systemd:
+    name: minio
+    daemon_reload: True
+  when: ansible_service_mgr == "systemd"
+
 - name: Create the Minio server init.d config
   template:
     src: minio.init.j2
@@ -82,6 +92,11 @@
     mode: 0750
   when: ansible_service_mgr != "systemd"
   notify: restart minio
+
+- name: Reload minio service
+  systemd:
+    name: minio
+    daemon_reload: True
 
 - name: Enable and start the Minio service
   service:
